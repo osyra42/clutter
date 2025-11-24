@@ -1,3 +1,4 @@
+console.log("Thanks for using Clutter")
 // Constants
 const HOLIDAYS = [
   { month: 12, day: 25, name: "Christmas" },
@@ -6,10 +7,13 @@ const HOLIDAYS = [
 ];
 
 const SEASONS = [
-  { start: { month: 3, day: 20 }, end: { month: 6, day: 20 }, name: "Spring" },
-  { start: { month: 6, day: 21 }, end: { month: 9, day: 21 }, name: "Summer" },
-  { start: { month: 9, day: 22 }, end: { month: 12, day: 20 }, name: "Fall" },
-  { start: { month: 12, day: 21 }, end: { month: 3, day: 19 }, name: "Winter" },
+  { start: { month: 3, day: 20 }, end: { month: 6, day: 20 }, name: "Fall" }, // Use fall as default since no spring images
+  { start: { month: 6, day: 21 }, end: { month: 9, day: 21 }, name: "Fall" }, // Use fall as default since no summer images
+  { start: { month: 9, day: 22 }, end: { month: 11, day: 27 }, name: "Fall" },
+  { start: { month: 11, day: 28 }, end: { month: 11, day: 28 }, name: "Thanksgiving" },
+  { start: { month: 11, day: 29 }, end: { month: 12, day: 20 }, name: "Fall" },
+  { start: { month: 12, day: 21 }, end: { month: 12, day: 31 }, name: "Winter" },
+  { start: { month: 1, day: 1 }, end: { month: 3, day: 19 }, name: "Winter" },
 ];
 
 const CLUTTER_COUNT = 20;
@@ -33,8 +37,11 @@ function getSeason() {
   const month = now.getMonth() + 1;
   const day = now.getDate();
 
+  console.log(`Current date: ${month}/${day}`);
+
   for (const holiday of HOLIDAYS) {
     if (month === holiday.month && day === holiday.day) {
+      console.log(`Holiday detected: ${holiday.name}`);
       return holiday.name;
     }
   }
@@ -46,11 +53,14 @@ function getSeason() {
       (month < end.month || (month === end.month && day <= end.day));
 
     if (isWithinSeason) {
+      console.log(`The current season is ${name}!`);
       return name;
     }
   }
 
-  return "Winter";
+  // Fallback to winter if no season detected
+  console.log('No season detected, defaulting to Winter');
+  return 'Winter';
 }
 
 function createStyle() {
@@ -71,7 +81,18 @@ function createStyle() {
 
 function initializeAvailableImages(clutterTheme) {
   availableImages = [];
-  for (let i = 0; i < CLUTTER_COUNT; i++) {
+
+  // Determine number of images based on theme
+  const imageCounts = {
+    'christmas': 6,
+    'fall': 4,
+    'thanksgiving': 8,
+    'winter': 9
+  };
+
+  const imageCount = imageCounts[clutterTheme] || CLUTTER_COUNT;
+
+  for (let i = 0; i < imageCount; i++) {
     availableImages.push(`${clutterTheme}${i}.png`);
   }
 }
@@ -80,10 +101,12 @@ function preloadImages(clutterTheme, callback) {
   const promises = availableImages.map((image) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.src = `assets/clutter/${image}`;
+      // Always use GitHub URLs for extension context with theme subdirectory
+      const imagePath = `https://raw.githubusercontent.com/osyra42/clutter/main/clutter/${clutterTheme}/${image}`;
+      img.src = imagePath;
       img.onload = () => resolve(image);
       img.onerror = () => {
-        console.warn(`Failed to load image: assets/clutter/${image}`);
+        console.warn(`Failed to load image: ${imagePath}`);
         resolve(null);
       };
     });
@@ -96,25 +119,39 @@ function preloadImages(clutterTheme, callback) {
 }
 
 function createClutter(clutterTheme) {
-  if (availableImages.length === 0) return;
+  if (availableImages.length === 0) {
+    console.error('Cannot create clutter: no available images!');
+    return;
+  }
 
   const clutter = document.createElement("div");
   clutter.className = "clutter";
 
-  clutter.style.left = `${Math.random() * window.innerWidth}px`;
+  const left = Math.random() * window.innerWidth;
+  clutter.style.left = `${left}px`;
 
   // Random Y position only during initial load
+  let top;
   if (!initialLoadComplete) {
-    clutter.style.top = `${Math.random() * window.innerHeight}px`;
+    top = Math.random() * window.innerHeight;
+    clutter.style.top = `${top}px`;
   } else {
+    top = 0;
     clutter.style.top = "0px";
   }
 
   const randomIndex = Math.floor(Math.random() * availableImages.length);
-  const imageUrl = `assets/clutter/${availableImages[randomIndex]}`;
+  // Always use GitHub URLs for extension context with theme subdirectory
+  const imageUrl = `https://raw.githubusercontent.com/osyra42/clutter/main/clutter/${clutterTheme}/${availableImages[randomIndex]}`;
 
   clutter.style.backgroundImage = `url(${imageUrl})`;
-  clutter.style.transform = `rotate(${Math.random() * 360}deg)`;
+  const rotation = Math.random() * 360;
+  clutter.style.transform = `rotate(${rotation}deg)`;
+
+  if (clutterElements.length < 3) {
+    console.log(`Creating clutter #${clutterElements.length}: position (${left}, ${top}), rotation ${rotation}deg, image: ${imageUrl}`);
+  }
+
   document.body.appendChild(clutter);
 
   clutter.velocityX = 0;
@@ -225,14 +262,34 @@ function applyBouncePhysics() {
 
 // Main Execution
 const season = getSeason();
-const clutterTheme = season.toLowerCase();
+let clutterTheme = season.toLowerCase();
+
+// Map theme names to actual file names
+const themeMap = {
+  'fourthofjuly': 'fall', // No FourthOfJuly images, use fall
+  'spring': 'fall',       // No spring images, use fall
+  'summer': 'fall'        // No summer images, use fall
+};
+
+clutterTheme = themeMap[clutterTheme] || clutterTheme;
+console.log(`Using theme: ${clutterTheme}`);
 createStyle();
 initializeAvailableImages(clutterTheme);
 
+console.log(`Starting to preload images for theme: ${clutterTheme}`);
+console.log(`Available images to load:`, availableImages);
+console.log(`Image URLs available:`, window.CLUTTER_IMAGE_URLS);
+
 preloadImages(clutterTheme, () => {
+  console.log(`Preload complete! Available images:`, availableImages);
+  console.log(`Creating ${CLUTTER_COUNT} clutter elements`);
+
   for (let i = 0; i < CLUTTER_COUNT; i++) {
     createClutter(clutterTheme);
   }
+
+  console.log(`Created ${clutterElements.length} clutter elements`);
   initialLoadComplete = true;
   applyBouncePhysics();
+  console.log('Bounce physics applied, clutter should now be visible!');
 });

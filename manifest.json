@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Clutter - Seasonal Decorations",
+  "version": "1.0",
+  "description": "Add festive seasonal decorations that fall on every webpage!",
+  "permissions": ["storage"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Toggle Clutter"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "clutter/christmas/*.png",
+        "clutter/fall/*.png",
+        "clutter/thanksgiving/*.png",
+        "clutter/winter/*.png",
+        "clutter.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "icons": {
+    "16": "clutter/winter/winter0.png",
+    "48": "clutter/winter/winter0.png",
+    "128": "clutter/winter/winter0.png"
+  }
+}
