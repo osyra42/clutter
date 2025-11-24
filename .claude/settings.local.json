@@ -3,7 +3,8 @@
     "allow": [
       "Bash(done)",
       "Bash(date:*)",
-      "Bash(dir /B /S)"
+      "Bash(dir /B /S)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

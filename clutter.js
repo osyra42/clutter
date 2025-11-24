@@ -102,7 +102,7 @@ function preloadImages(clutterTheme, callback) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       // Always use GitHub URLs for extension context with theme subdirectory
-      const imagePath = `https://raw.githubusercontent.com/osyra42/clutter/main/clutter/${clutterTheme}/${image}`;
+      const imagePath = `https://raw.githubusercontent.com/osyra42/clutter/main/images/${clutterTheme}/${image}`;
       img.src = imagePath;
       img.onload = () => resolve(image);
       img.onerror = () => {
@@ -142,7 +142,7 @@ function createClutter(clutterTheme) {
 
   const randomIndex = Math.floor(Math.random() * availableImages.length);
   // Always use GitHub URLs for extension context with theme subdirectory
-  const imageUrl = `https://raw.githubusercontent.com/osyra42/clutter/main/clutter/${clutterTheme}/${availableImages[randomIndex]}`;
+  const imageUrl = `https://raw.githubusercontent.com/osyra42/clutter/main/images/${clutterTheme}/${availableImages[randomIndex]}`;
 
   clutter.style.backgroundImage = `url(${imageUrl})`;
   const rotation = Math.random() * 360;

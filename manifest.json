@@ -21,18 +21,18 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "clutter/christmas/*.png",
-        "clutter/fall/*.png",
-        "clutter/thanksgiving/*.png",
-        "clutter/winter/*.png",
+        "images/christmas/*.png",
+        "images/fall/*.png",
+        "images/thanksgiving/*.png",
+        "images/winter/*.png",
         "clutter.js"
       ],
       "matches": ["<all_urls>"]
     }
   ],
   "icons": {
-    "16": "clutter/winter/winter0.png",
-    "48": "clutter/winter/winter0.png",
-    "128": "clutter/winter/winter0.png"
+    "16": "images/winter/winter0.png",
+    "48": "images/winter/winter0.png",
+    "128": "images/winter/winter0.png"
   }
 }
