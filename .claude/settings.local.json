@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(done)",
+      "Bash(date:*)",
+      "Bash(dir /B /S)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
