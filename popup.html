@@ -3,11 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <style>
+    :root {
+      --espresso: #1e1610;
+      --dark-mocha: #2a1e14;
+      --coffee-bean: #453024;
+      --steamed-milk: #f5f5dc;
+      --light-cream: #f8e5c8;
+      --half-and-half: #d2b48c;
+      --caramel: #d2691e;
+      --pumpkin-spice: #b68d40;
+      --mocha: #8b4513;
+      --dark-caramel: #38271e;
+      --toasted-almond: #5c4937;
+    }
+
     body {
-      width: 200px;
+      width: 250px;
       padding: 15px;
       font-family: Arial, sans-serif;
       margin: 0;
+      background-color: var(--espresso);
+      color: var(--steamed-milk);
     }
 
     .header {
@@ -18,12 +34,12 @@
     h1 {
       font-size: 18px;
       margin: 0 0 5px 0;
-      color: #333;
+      color: var(--caramel);
     }
 
     .subtitle {
       font-size: 12px;
-      color: #666;
+      color: var(--half-and-half);
       margin-bottom: 15px;
     }
 
@@ -32,14 +48,15 @@
       justify-content: space-between;
       align-items: center;
       padding: 10px;
-      background: #f5f5f5;
+      background: var(--dark-mocha);
+      border: 1px solid var(--coffee-bean);
       border-radius: 8px;
     }
 
     .toggle-label {
       font-size: 14px;
       font-weight: bold;
-      color: #333;
+      color: var(--steamed-milk);
     }
 
     .switch {
@@ -62,7 +79,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: #ccc;
+      background-color: var(--coffee-bean);
       transition: 0.4s;
       border-radius: 24px;
     }
@@ -74,13 +91,13 @@
       width: 18px;
       left: 3px;
       bottom: 3px;
-      background-color: white;
+      background-color: var(--steamed-milk);
       transition: 0.4s;
       border-radius: 50%;
     }
 
     input:checked + .slider {
-      background-color: #4CAF50;
+      background-color: var(--pumpkin-spice);
     }
 
     input:checked + .slider:before {
@@ -91,7 +108,98 @@
       text-align: center;
       margin-top: 10px;
       font-size: 12px;
-      color: #666;
+      color: var(--half-and-half);
+    }
+
+    .theme-selector {
+      margin-top: 15px;
+      padding: 10px;
+      background: var(--dark-mocha);
+      border: 1px solid var(--coffee-bean);
+      border-radius: 8px;
+    }
+
+    .theme-label {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--steamed-milk);
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .theme-dropdown {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid var(--coffee-bean);
+      border-radius: 4px;
+      background-color: var(--dark-caramel);
+      color: var(--light-cream);
+      cursor: pointer;
+    }
+
+    .theme-dropdown:focus {
+      outline: none;
+      border-color: var(--pumpkin-spice);
+    }
+
+    .theme-dropdown option {
+      background-color: var(--dark-caramel);
+      color: var(--light-cream);
+    }
+
+    .changelog {
+      margin-top: 15px;
+      padding: 10px;
+      background: var(--dark-mocha);
+      border: 1px solid var(--coffee-bean);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .changelog summary {
+      cursor: pointer;
+      font-weight: bold;
+      color: var(--steamed-milk);
+      user-select: none;
+      padding: 5px;
+    }
+
+    .changelog summary:hover {
+      color: var(--pumpkin-spice);
+    }
+
+    .changelog-content {
+      margin-top: 10px;
+      padding-left: 5px;
+    }
+
+    .version {
+      margin-bottom: 10px;
+    }
+
+    .version strong {
+      color: var(--caramel);
+    }
+
+    .version ul {
+      margin: 5px 0;
+      padding-left: 20px;
+    }
+
+    .version li {
+      margin: 3px 0;
+      color: var(--light-cream);
+    }
+
+    .footer {
+      margin-top: 15px;
+      padding: 10px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--half-and-half);
+      font-style: italic;
+      border-top: 1px solid var(--coffee-bean);
     }
   </style>
 </head>
@@ -109,8 +217,54 @@
     </label>
   </div>
 
+  <div class="theme-selector">
+    <label class="theme-label" for="themeSelect">Theme</label>
+    <select id="themeSelect" class="theme-dropdown">
+      <option value="auto">Auto (Current Season)</option>
+      <option value="winter">❄️ Winter</option>
+      <option value="fall">🍂 Fall</option>
+      <option value="thanksgiving">🦃 Thanksgiving</option>
+      <option value="christmas">🎄 Christmas</option>
+    </select>
+  </div>
+
   <div class="status" id="status">Loading...</div>
 
+  <details class="changelog">
+    <summary>📋 Changelog</summary>
+    <div class="changelog-content">
+      <div class="version">
+        <strong>2025.11.26</strong> - Current
+        <ul>
+          <li>Extension popup now matches the cozy coffee theme from the website</li>
+          <li>Even cleaner code organization for better performance</li>
+        </ul>
+      </div>
+      <div class="version">
+        <strong>2025.11.21</strong>
+        <ul>
+          <li>Choose your own theme or let it pick the season for you</li>
+          <li>Decorations now change instantly when you switch themes</li>
+          <li>Fixed decorations getting stuck in place</li>
+          <li>Cleaner code behind the scenes</li>
+        </ul>
+      </div>
+      <div class="version">
+        <strong>2025.11.20</strong> - First Release
+        <ul>
+          <li>Festive decorations that fall down your screen</li>
+          <li>Push decorations around with your mouse</li>
+          <li>Turn decorations on or off anytime</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <div class="footer">
+    I hope you enjoy this clutter. -osyra42
+  </div>
+
+  <script src="themes.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

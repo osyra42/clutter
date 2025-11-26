@@ -1,22 +1,6 @@
 console.log("Thanks for using Clutter")
-// Constants
-const HOLIDAYS = [
-  { month: 12, day: 25, name: "Christmas" },
-  { month: 7, day: 4, name: "FourthOfJuly" },
-  { month: 11, day: 28, name: "Thanksgiving" },
-];
 
-const SEASONS = [
-  { start: { month: 3, day: 20 }, end: { month: 6, day: 20 }, name: "Fall" }, // Use fall as default since no spring images
-  { start: { month: 6, day: 21 }, end: { month: 9, day: 21 }, name: "Fall" }, // Use fall as default since no summer images
-  { start: { month: 9, day: 22 }, end: { month: 11, day: 27 }, name: "Fall" },
-  { start: { month: 11, day: 28 }, end: { month: 11, day: 28 }, name: "Thanksgiving" },
-  { start: { month: 11, day: 29 }, end: { month: 12, day: 20 }, name: "Fall" },
-  { start: { month: 12, day: 21 }, end: { month: 12, day: 31 }, name: "Winter" },
-  { start: { month: 1, day: 1 }, end: { month: 3, day: 19 }, name: "Winter" },
-];
-
-const CLUTTER_COUNT = 20;
+const CLUTTER_COUNT = 20; // Default fallback
 const CLUTTER_SPEED = { min: 1, max: 3 };
 const BOUNCE_FORCE = 0.5;
 const COLLISION_RADIUS = 50;
@@ -31,37 +15,8 @@ let lastMouseX = 0;
 let lastMouseY = 0;
 let lastMouseTime = Date.now();
 let initialLoadComplete = false;
-
-function getSeason() {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const day = now.getDate();
-
-  console.log(`Current date: ${month}/${day}`);
-
-  for (const holiday of HOLIDAYS) {
-    if (month === holiday.month && day === holiday.day) {
-      console.log(`Holiday detected: ${holiday.name}`);
-      return holiday.name;
-    }
-  }
-
-  for (const season of SEASONS) {
-    const { start, end, name } = season;
-    const isWithinSeason =
-      (month > start.month || (month === start.month && day >= start.day)) &&
-      (month < end.month || (month === end.month && day <= end.day));
-
-    if (isWithinSeason) {
-      console.log(`The current season is ${name}!`);
-      return name;
-    }
-  }
-
-  // Fallback to winter if no season detected
-  console.log('No season detected, defaulting to Winter');
-  return 'Winter';
-}
+let currentClutterTheme = 'winter'; // Global variable to track current theme
+let animationFrameId = null; // Track animation frame for cleanup
 
 function createStyle() {
   const style = document.createElement("style");
@@ -82,15 +37,10 @@ function createStyle() {
 function initializeAvailableImages(clutterTheme) {
   availableImages = [];
 
-  // Determine number of images based on theme
-  const imageCounts = {
-    'christmas': 6,
-    'fall': 4,
-    'thanksgiving': 8,
-    'winter': 9
-  };
-
-  const imageCount = imageCounts[clutterTheme] || CLUTTER_COUNT;
+  // Get image count from themes.js
+  const imageCount = typeof getImageCount !== 'undefined'
+    ? getImageCount(clutterTheme)
+    : CLUTTER_COUNT;
 
   for (let i = 0; i < imageCount; i++) {
     availableImages.push(`${clutterTheme}${i}.png`);
@@ -250,46 +200,105 @@ function applyBouncePhysics() {
       ) {
         clutter.remove();
         clutterElements.splice(index, 1);
-        createClutter(clutterTheme);
+        createClutter(currentClutterTheme);
       }
     });
 
-    requestAnimationFrame(update);
+    animationFrameId = requestAnimationFrame(update);
   }
 
-  requestAnimationFrame(update);
+  animationFrameId = requestAnimationFrame(update);
 }
 
-// Main Execution
-const season = getSeason();
-let clutterTheme = season.toLowerCase();
+// Function to clean up existing clutter
+function cleanupClutter() {
+  console.log('Cleaning up existing clutter...');
 
-// Map theme names to actual file names
-const themeMap = {
-  'fourthofjuly': 'fall', // No FourthOfJuly images, use fall
-  'spring': 'fall',       // No spring images, use fall
-  'summer': 'fall'        // No summer images, use fall
-};
-
-clutterTheme = themeMap[clutterTheme] || clutterTheme;
-console.log(`Using theme: ${clutterTheme}`);
-createStyle();
-initializeAvailableImages(clutterTheme);
-
-console.log(`Starting to preload images for theme: ${clutterTheme}`);
-console.log(`Available images to load:`, availableImages);
-console.log(`Image URLs available:`, window.CLUTTER_IMAGE_URLS);
-
-preloadImages(clutterTheme, () => {
-  console.log(`Preload complete! Available images:`, availableImages);
-  console.log(`Creating ${CLUTTER_COUNT} clutter elements`);
-
-  for (let i = 0; i < CLUTTER_COUNT; i++) {
-    createClutter(clutterTheme);
+  // Stop animation
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
   }
 
-  console.log(`Created ${clutterElements.length} clutter elements`);
-  initialLoadComplete = true;
-  applyBouncePhysics();
-  console.log('Bounce physics applied, clutter should now be visible!');
+  // Remove all clutter elements
+  clutterElements.forEach(clutter => clutter.remove());
+  clutterElements = [];
+
+  // Remove styles
+  const styles = document.querySelectorAll('style');
+  styles.forEach(style => {
+    if (style.textContent.includes('.clutter')) {
+      style.remove();
+    }
+  });
+
+  // Reset state
+  initialLoadComplete = false;
+  availableImages = [];
+}
+
+// Function to initialize clutter with a specific theme
+function initializeClutter(theme) {
+  // Clean up any existing clutter first
+  cleanupClutter();
+
+  // Use getCurrentTheme from themes.js if available, otherwise fallback to 'winter'
+  const season = theme === 'auto' || !theme
+    ? (typeof getCurrentTheme !== 'undefined' ? getCurrentTheme() : 'winter')
+    : theme;
+  let clutterTheme = season.toLowerCase();
+
+  // No need for theme mapping - themes.js handles all theme logic
+  currentClutterTheme = clutterTheme; // Update global theme variable
+  console.log(`Using theme: ${clutterTheme}`);
+
+  createStyle();
+  initializeAvailableImages(clutterTheme);
+
+  console.log(`Starting to preload images for theme: ${clutterTheme}`);
+  console.log(`Available images to load:`, availableImages);
+  console.log(`Image URLs available:`, window.CLUTTER_IMAGE_URLS);
+
+  preloadImages(clutterTheme, () => {
+    console.log(`Preload complete! Available images:`, availableImages);
+    console.log(`Creating ${CLUTTER_COUNT} clutter elements`);
+
+    for (let i = 0; i < CLUTTER_COUNT; i++) {
+      createClutter(clutterTheme);
+    }
+
+    console.log(`Created ${clutterElements.length} clutter elements`);
+    initialLoadComplete = true;
+    applyBouncePhysics();
+    console.log('Bounce physics applied, clutter should now be visible!');
+  });
+}
+
+// Expose reinitialize function globally for theme changes
+window.reinitializeClutter = function(theme) {
+  console.log('Reinitializing clutter with theme:', theme);
+  initializeClutter(theme);
+};
+
+// Listen for theme change messages from content script
+window.addEventListener('message', (event) => {
+  // Only accept messages from the same origin
+  if (event.source !== window) return;
+
+  if (event.data.type === 'CLUTTER_CHANGE_THEME') {
+    console.log('Received theme change message:', event.data.theme);
+    initializeClutter(event.data.theme);
+  }
 });
+
+// Main Execution - Check storage for saved theme
+if (typeof chrome !== 'undefined' && chrome.storage) {
+  chrome.storage.sync.get(['clutterTheme'], (result) => {
+    const savedTheme = result.clutterTheme || 'auto';
+    console.log(`Loaded theme from storage: ${savedTheme}`);
+    initializeClutter(savedTheme);
+  });
+} else {
+  // Fallback if storage is not available
+  initializeClutter('auto');
+}

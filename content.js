@@ -9,24 +9,36 @@ function injectClutter() {
   console.log('[Clutter Extension] injectClutter() called, clutterActive:', clutterActive);
   if (clutterActive) return;
 
-  // Check if script already exists
-  if (document.getElementById('clutter-script')) {
-    console.log('[Clutter Extension] Script already injected, skipping');
+  // Check if scripts already exist
+  if (document.getElementById('clutter-script') || document.getElementById('themes-script')) {
+    console.log('[Clutter Extension] Scripts already injected, skipping');
     clutterActive = true;
     return;
   }
 
-  // Inject the clutter script
-  clutterScript = document.createElement('script');
-  clutterScript.src = chrome.runtime.getURL('clutter.js');
-  clutterScript.id = 'clutter-script';
-  clutterScript.onload = () => {
-    console.log('[Clutter Extension] clutter.js script loaded successfully');
+  // Inject themes.js first
+  const themesScript = document.createElement('script');
+  themesScript.src = chrome.runtime.getURL('themes.js');
+  themesScript.id = 'themes-script';
+  themesScript.onload = () => {
+    console.log('[Clutter Extension] themes.js script loaded successfully');
+
+    // Then inject the clutter script
+    clutterScript = document.createElement('script');
+    clutterScript.src = chrome.runtime.getURL('clutter.js');
+    clutterScript.id = 'clutter-script';
+    clutterScript.onload = () => {
+      console.log('[Clutter Extension] clutter.js script loaded successfully');
+    };
+    clutterScript.onerror = (error) => {
+      console.error('[Clutter Extension] Failed to load clutter.js script:', error);
+    };
+    (document.head || document.documentElement).appendChild(clutterScript);
   };
-  clutterScript.onerror = (error) => {
-    console.error('[Clutter Extension] Failed to load clutter.js script:', error);
+  themesScript.onerror = (error) => {
+    console.error('[Clutter Extension] Failed to load themes.js script:', error);
   };
-  (document.head || document.documentElement).appendChild(clutterScript);
+  (document.head || document.documentElement).appendChild(themesScript);
 
   clutterActive = true;
   console.log('[Clutter Extension] Injection started');
@@ -41,9 +53,22 @@ function removeClutter() {
   clutterElements.forEach(el => el.remove());
 
   // Remove the clutter style
-  const clutterStyle = document.querySelector('style');
-  if (clutterStyle && clutterStyle.textContent.includes('.clutter')) {
-    clutterStyle.remove();
+  const clutterStyles = document.querySelectorAll('style');
+  clutterStyles.forEach(style => {
+    if (style.textContent.includes('.clutter')) {
+      style.remove();
+    }
+  });
+
+  // Remove the injected scripts
+  const clutterScript = document.getElementById('clutter-script');
+  if (clutterScript) {
+    clutterScript.remove();
+  }
+
+  const themesScript = document.getElementById('themes-script');
+  if (themesScript) {
+    themesScript.remove();
   }
 
   clutterActive = false;
@@ -70,5 +95,14 @@ chrome.runtime.onMessage.addListener((message) => {
     } else {
       removeClutter();
     }
+  } else if (message.action === 'changeTheme') {
+    // When theme changes, send message to the page to reinitialize
+    console.log('[Clutter Extension] Theme changed to:', message.theme);
+
+    // Send message to the injected clutter script
+    window.postMessage({
+      type: 'CLUTTER_CHANGE_THEME',
+      theme: message.theme
+    }, '*');
   }
 });
