@@ -7,7 +7,7 @@ A Chrome extension that adds festive seasonal decorations that fall on every web
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable "Developer mode" in the top right corner
 3. Click "Load unpacked"
-4. Select the `Clutter Extention` folder
+4. Select the `clutter` folder
 5. The extension is now installed and active!
 
 ## Features
