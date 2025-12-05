@@ -4,8 +4,141 @@ const CLUTTER_COUNT = 20; // Default fallback
 const CLUTTER_SPEED = { min: 1, max: 3 };
 const BOUNCE_FORCE = 0.5;
 const COLLISION_RADIUS = 50;
+const MOUSE_RADIUS = 30; // Radius of the mouse "ball"
+const CLUTTER_MASS = 1; // Mass of clutter elements
+const MAX_VELOCITY = 10;
+const RESTITUTION = 0.8; // Coefficient of restitution (bounciness)
+const DAMPING = 0.98;
 
-let clutterElements = [];
+// Particle class for better performance and organization
+class Particle {
+  constructor(theme, isInitialLoad) {
+    this.element = document.createElement("div");
+    this.element.className = "clutter";
+    this.velocityX = 0;
+    this.velocityY = CLUTTER_SPEED.min + Math.random() * (CLUTTER_SPEED.max - CLUTTER_SPEED.min);
+    this.theme = theme;
+    this.width = 30;
+    this.height = 30;
+
+    this.reset(isInitialLoad);
+    document.body.appendChild(this.element);
+  }
+
+  reset(isInitialLoad = false) {
+    // Reset position
+    const left = Math.random() * window.innerWidth;
+    const top = isInitialLoad ? Math.random() * window.innerHeight : 0;
+
+    this.element.style.left = `${left}px`;
+    this.element.style.top = `${top}px`;
+
+    // Reset velocity
+    this.velocityX = 0;
+    this.velocityY = CLUTTER_SPEED.min + Math.random() * (CLUTTER_SPEED.max - CLUTTER_SPEED.min);
+
+    // Random image and rotation
+    const randomIndex = Math.floor(Math.random() * availableImages.length);
+    const imageUrl = `https://raw.githubusercontent.com/osyra42/clutter/main/images/${this.theme}/${availableImages[randomIndex]}`;
+    this.element.style.backgroundImage = `url(${imageUrl})`;
+
+    const rotation = Math.random() * 360;
+    this.element.style.transform = `rotate(${rotation}deg)`;
+  }
+
+  updatePosition(x, y) {
+    this.element.style.left = `${x}px`;
+    this.element.style.top = `${y}px`;
+  }
+
+  getBounds() {
+    const rect = this.element.getBoundingClientRect();
+    return {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      centerX: rect.left + rect.width / 2,
+      centerY: rect.top + rect.height / 2
+    };
+  }
+
+  checkCollision(mouseX, mouseY, mouseSpeedX, mouseSpeedY) {
+    const bounds = this.getBounds();
+    const distanceX = mouseX - bounds.centerX;
+    const distanceY = mouseY - bounds.centerY;
+    const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+    const combinedRadius = MOUSE_RADIUS + bounds.width / 2;
+
+    if (distance < combinedRadius) {
+      const dirX = distanceX / distance;
+      const dirY = distanceY / distance;
+
+      const relativeVelocityX = mouseSpeedX - this.velocityX;
+      const relativeVelocityY = mouseSpeedY - this.velocityY;
+      const velocityAlongNormal = relativeVelocityX * dirX + relativeVelocityY * dirY;
+
+      if (velocityAlongNormal < 0) {
+        const impulse = -(1 + RESTITUTION) * velocityAlongNormal;
+
+        this.velocityX -= (impulse * dirX) / CLUTTER_MASS;
+        this.velocityY -= (impulse * dirY) / CLUTTER_MASS;
+
+        this.velocityX += (Math.random() - 0.5) * BOUNCE_FORCE;
+        this.velocityY += (Math.random() - 0.5) * BOUNCE_FORCE;
+
+        this.velocityX *= DAMPING;
+        this.velocityY *= DAMPING;
+      }
+    }
+  }
+
+  limitVelocity() {
+    const velocityMagnitude = Math.sqrt(
+      this.velocityX * this.velocityX + this.velocityY * this.velocityY
+    );
+    if (velocityMagnitude > MAX_VELOCITY) {
+      const scale = MAX_VELOCITY / velocityMagnitude;
+      this.velocityX *= scale;
+      this.velocityY *= scale;
+    }
+  }
+
+  update() {
+    this.limitVelocity();
+
+    const newLeft = this.element.offsetLeft + this.velocityX;
+    const newTop = this.element.offsetTop + this.velocityY;
+
+    this.updatePosition(newLeft, newTop);
+
+    return this.isOutOfBounds();
+  }
+
+  isOutOfBounds() {
+    const bounds = this.getBounds();
+    return (
+      this.element.offsetLeft < -bounds.width ||
+      this.element.offsetLeft > window.innerWidth ||
+      this.element.offsetTop > window.innerHeight ||
+      this.element.offsetTop < -bounds.height
+    );
+  }
+
+  destroy() {
+    this.element.remove();
+  }
+
+  changeTheme(newTheme) {
+    this.theme = newTheme;
+    const randomIndex = Math.floor(Math.random() * availableImages.length);
+    const imageUrl = `https://raw.githubusercontent.com/osyra42/clutter/main/images/${newTheme}/${availableImages[randomIndex]}`;
+    this.element.style.backgroundImage = `url(${imageUrl})`;
+  }
+}
+
+// Global state
+let particlePool = [];
 let availableImages = [];
 let mouseX = 0;
 let mouseY = 0;
@@ -15,8 +148,8 @@ let lastMouseX = 0;
 let lastMouseY = 0;
 let lastMouseTime = Date.now();
 let initialLoadComplete = false;
-let currentClutterTheme = 'winter'; // Global variable to track current theme
-let animationFrameId = null; // Track animation frame for cleanup
+let currentClutterTheme = 'winter';
+let animationFrameId = null;
 
 function createStyle() {
   const style = document.createElement("style");
@@ -37,7 +170,6 @@ function createStyle() {
 function initializeAvailableImages(clutterTheme) {
   availableImages = [];
 
-  // Get image count from themes.js
   const imageCount = typeof getImageCount !== 'undefined'
     ? getImageCount(clutterTheme)
     : CLUTTER_COUNT;
@@ -51,7 +183,6 @@ function preloadImages(clutterTheme, callback) {
   const promises = availableImages.map((image) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      // Always use GitHub URLs for extension context with theme subdirectory
       const imagePath = `https://raw.githubusercontent.com/osyra42/clutter/main/images/${clutterTheme}/${image}`;
       img.src = imagePath;
       img.onload = () => resolve(image);
@@ -68,50 +199,19 @@ function preloadImages(clutterTheme, callback) {
   });
 }
 
-function createClutter(clutterTheme) {
+function createParticlePool(count, theme, isInitialLoad) {
   if (availableImages.length === 0) {
-    console.error('Cannot create clutter: no available images!');
+    console.error('Cannot create particles: no available images!');
     return;
   }
 
-  const clutter = document.createElement("div");
-  clutter.className = "clutter";
-
-  const left = Math.random() * window.innerWidth;
-  clutter.style.left = `${left}px`;
-
-  // Random Y position only during initial load
-  let top;
-  if (!initialLoadComplete) {
-    top = Math.random() * window.innerHeight;
-    clutter.style.top = `${top}px`;
-  } else {
-    top = 0;
-    clutter.style.top = "0px";
+  for (let i = 0; i < count; i++) {
+    const particle = new Particle(theme, isInitialLoad);
+    particlePool.push(particle);
   }
 
-  const randomIndex = Math.floor(Math.random() * availableImages.length);
-  // Always use GitHub URLs for extension context with theme subdirectory
-  const imageUrl = `https://raw.githubusercontent.com/osyra42/clutter/main/images/${clutterTheme}/${availableImages[randomIndex]}`;
-
-  clutter.style.backgroundImage = `url(${imageUrl})`;
-  const rotation = Math.random() * 360;
-  clutter.style.transform = `rotate(${rotation}deg)`;
-
-  if (clutterElements.length < 3) {
-    console.log(`Creating clutter #${clutterElements.length}: position (${left}, ${top}), rotation ${rotation}deg, image: ${imageUrl}`);
-  }
-
-  document.body.appendChild(clutter);
-
-  clutter.velocityX = 0;
-  clutter.velocityY = CLUTTER_SPEED.min + Math.random() * (CLUTTER_SPEED.max - CLUTTER_SPEED.min);
-
-  clutterElements.push(clutter);
+  console.log(`Created ${particlePool.length} particles`);
 }
-
-const MOUSE_RADIUS = 30; // Radius of the mouse "ball"
-const CLUTTER_MASS = 1; // Mass of clutter elements (can be adjusted per element if needed)
 
 function applyBouncePhysics() {
   document.addEventListener("mousemove", (event) => {
@@ -131,76 +231,13 @@ function applyBouncePhysics() {
   });
 
   function update() {
-    clutterElements.forEach((clutter, index) => {
-      const clutterRect = clutter.getBoundingClientRect();
-      const clutterCenterX = clutterRect.left + clutterRect.width / 2;
-      const clutterCenterY = clutterRect.top + clutterRect.height / 2;
+    particlePool.forEach((particle) => {
+      particle.checkCollision(mouseX, mouseY, mouseSpeedX, mouseSpeedY);
 
-      // Distance between mouse and clutter center
-      const distanceX = mouseX - clutterCenterX;
-      const distanceY = mouseY - clutterCenterY;
-      const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+      const isOutOfBounds = particle.update();
 
-      // Combined radius of mouse and clutter
-      const combinedRadius = MOUSE_RADIUS + clutterRect.width / 2;
-
-      // Check for collision
-      if (distance < combinedRadius) {
-        const dirX = distanceX / distance;
-        const dirY = distanceY / distance;
-
-        // Relative velocity between mouse and clutter
-        const relativeVelocityX = mouseSpeedX - clutter.velocityX;
-        const relativeVelocityY = mouseSpeedY - clutter.velocityY;
-
-        // Velocity along the normal (collision direction)
-        const velocityAlongNormal = relativeVelocityX * dirX + relativeVelocityY * dirY;
-
-        // Only resolve collision if objects are moving towards each other
-        if (velocityAlongNormal < 0) {
-          const restitution = 0.8; // Coefficient of restitution (bounciness)
-          const impulse = -(1 + restitution) * velocityAlongNormal;
-
-          // Apply impulse to clutter
-          clutter.velocityX -= (impulse * dirX) / CLUTTER_MASS;
-          clutter.velocityY -= (impulse * dirY) / CLUTTER_MASS;
-
-          // Add some randomness for realism
-          clutter.velocityX += (Math.random() - 0.5) * BOUNCE_FORCE;
-          clutter.velocityY += (Math.random() - 0.5) * BOUNCE_FORCE;
-
-          // Apply damping to simulate energy loss
-          const damping = 0.98;
-          clutter.velocityX *= damping;
-          clutter.velocityY *= damping;
-        }
-      }
-
-      // Limit maximum velocity to prevent unrealistic behavior
-      const maxVelocity = 10;
-      const velocityMagnitude = Math.sqrt(
-        clutter.velocityX * clutter.velocityX + clutter.velocityY * clutter.velocityY
-      );
-      if (velocityMagnitude > maxVelocity) {
-        const scale = maxVelocity / velocityMagnitude;
-        clutter.velocityX *= scale;
-        clutter.velocityY *= scale;
-      }
-
-      // Update clutter position
-      clutter.style.left = `${clutter.offsetLeft + clutter.velocityX}px`;
-      clutter.style.top = `${clutter.offsetTop + clutter.velocityY}px`;
-
-      // Check if clutter is out of bounds
-      if (
-        clutter.offsetLeft < -clutterRect.width ||
-        clutter.offsetLeft > window.innerWidth ||
-        clutter.offsetTop > window.innerHeight ||
-        clutter.offsetTop < -clutterRect.height
-      ) {
-        clutter.remove();
-        clutterElements.splice(index, 1);
-        createClutter(currentClutterTheme);
+      if (isOutOfBounds) {
+        particle.reset(false);
       }
     });
 
@@ -210,21 +247,17 @@ function applyBouncePhysics() {
   animationFrameId = requestAnimationFrame(update);
 }
 
-// Function to clean up existing clutter
 function cleanupClutter() {
   console.log('Cleaning up existing clutter...');
 
-  // Stop animation
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
   }
 
-  // Remove all clutter elements
-  clutterElements.forEach(clutter => clutter.remove());
-  clutterElements = [];
+  particlePool.forEach(particle => particle.destroy());
+  particlePool = [];
 
-  // Remove styles
   const styles = document.querySelectorAll('style');
   styles.forEach(style => {
     if (style.textContent.includes('.clutter')) {
@@ -232,24 +265,19 @@ function cleanupClutter() {
     }
   });
 
-  // Reset state
   initialLoadComplete = false;
   availableImages = [];
 }
 
-// Function to initialize clutter with a specific theme
 function initializeClutter(theme) {
-  // Clean up any existing clutter first
   cleanupClutter();
 
-  // Use getCurrentTheme from themes.js if available, otherwise fallback to 'winter'
   const season = theme === 'auto' || !theme
     ? (typeof getCurrentTheme !== 'undefined' ? getCurrentTheme() : 'winter')
     : theme;
   let clutterTheme = season.toLowerCase();
 
-  // No need for theme mapping - themes.js handles all theme logic
-  currentClutterTheme = clutterTheme; // Update global theme variable
+  currentClutterTheme = clutterTheme;
   console.log(`Using theme: ${clutterTheme}`);
 
   createStyle();
@@ -257,32 +285,25 @@ function initializeClutter(theme) {
 
   console.log(`Starting to preload images for theme: ${clutterTheme}`);
   console.log(`Available images to load:`, availableImages);
-  console.log(`Image URLs available:`, window.CLUTTER_IMAGE_URLS);
 
   preloadImages(clutterTheme, () => {
     console.log(`Preload complete! Available images:`, availableImages);
-    console.log(`Creating ${CLUTTER_COUNT} clutter elements`);
+    console.log(`Creating ${CLUTTER_COUNT} particles`);
 
-    for (let i = 0; i < CLUTTER_COUNT; i++) {
-      createClutter(clutterTheme);
-    }
+    createParticlePool(CLUTTER_COUNT, clutterTheme, !initialLoadComplete);
 
-    console.log(`Created ${clutterElements.length} clutter elements`);
     initialLoadComplete = true;
     applyBouncePhysics();
-    console.log('Bounce physics applied, clutter should now be visible!');
+    console.log('Bounce physics applied, particles should now be visible!');
   });
 }
 
-// Expose reinitialize function globally for theme changes
 window.reinitializeClutter = function(theme) {
   console.log('Reinitializing clutter with theme:', theme);
   initializeClutter(theme);
 };
 
-// Listen for theme change messages from content script
 window.addEventListener('message', (event) => {
-  // Only accept messages from the same origin
   if (event.source !== window) return;
 
   if (event.data.type === 'CLUTTER_CHANGE_THEME') {
@@ -291,7 +312,6 @@ window.addEventListener('message', (event) => {
   }
 });
 
-// Main Execution - Check storage for saved theme
 if (typeof chrome !== 'undefined' && chrome.storage) {
   chrome.storage.sync.get(['clutterTheme'], (result) => {
     const savedTheme = result.clutterTheme || 'auto';
@@ -299,6 +319,5 @@ if (typeof chrome !== 'undefined' && chrome.storage) {
     initializeClutter(savedTheme);
   });
 } else {
-  // Fallback if storage is not available
   initializeClutter('auto');
 }
