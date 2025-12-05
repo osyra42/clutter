@@ -30,13 +30,43 @@ function getNthWeekdayOfMonth(year, month, weekday, n) {
   return targetDay;
 }
 
-// Function to calculate dynamic holidays for the current year
-function calculateDynamicHolidays(year) {
-  const holidays = [];
+// Helper function to calculate Easter Sunday using Anonymous Gregorian algorithm
+function calculateEaster(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+
+  return { month, day };
+}
+
+// Function to calculate dynamic events for the current year
+function calculateDynamicEvents(year) {
+  const events = [];
+
+  // Easter - Moves between March 22 and April 25
+  const easter = calculateEaster(year);
+  events.push({
+    dayOfYear: getDayOfYear(easter.month, easter.day, year),
+    name: "easter",
+    displayName: "Easter",
+    emoji: "🐰",
+    imageCount: 4
+  });
 
   // Thanksgiving - 4th Thursday of November (month=11, weekday=4 for Thursday, n=4)
   const thanksgivingDay = getNthWeekdayOfMonth(year, 11, 4, 4);
-  holidays.push({
+  events.push({
     dayOfYear: getDayOfYear(11, thanksgivingDay, year),
     name: "thanksgiving",
     displayName: "Thanksgiving",
@@ -46,7 +76,7 @@ function calculateDynamicHolidays(year) {
 
   // Leap Day Anniversary - Feb 29 (only on leap years)
   if (isLeapYear(year)) {
-    holidays.push({
+    events.push({
       dayOfYear: getDayOfYear(2, 29, year),
       name: "leapday",
       displayName: "Anniversary (Leap Day)",
@@ -55,13 +85,24 @@ function calculateDynamicHolidays(year) {
     });
   }
 
-  return holidays;
+  return events;
 }
 
 const THEMES = {
-  // Fixed holidays (always same date every year)
+  // Seasonal definitions with date ranges (day of year)
+  // Seasons provide the base theme throughout the year
+  SEASONS: [
+    { start: 79, end: 171, name: "spring", displayName: "Spring", emoji: "🌸", imageCount: 4 }, // Day 79 (Mar 20) - Day 171 (Jun 20)
+    { start: 172, end: 264, name: "summer", displayName: "Summer", emoji: "☀️", imageCount: 4 }, // Day 172 (Jun 21) - Day 264 (Sep 21)
+    { start: 265, end: 354, name: "fall", displayName: "Fall", emoji: "🍂", imageCount: 4 }, // Day 265 (Sep 22) - Day 354 (Dec 20)
+    { start: 355, end: 365, name: "winter", displayName: "Winter", emoji: "❄️", imageCount: 9 }, // Day 355 (Dec 21) - Day 365 (Dec 31)
+    { start: 1, end: 78, name: "winter", displayName: "Winter", emoji: "❄️", imageCount: 9 } // Day 1 (Jan 1) - Day 78 (Mar 19)
+  ],
+
+  // Fixed events (always same date every year)
+  // Events override seasons on specific days
   // Using day of year: Jan 1 = 1, Dec 31 = 365
-  FIXED_HOLIDAYS: [
+  FIXED_EVENTS: [
     { dayOfYear: 1, name: "newyears", displayName: "New Year's Day", emoji: "🎊", imageCount: 4 }, // Jan 1
     { dayOfYear: 45, name: "valentines", displayName: "Valentine's Day", emoji: "💝", imageCount: 4 }, // Feb 14
     { dayOfYear: 76, name: "stpatricks", displayName: "St. Patrick's Day", emoji: "🍀", imageCount: 7 }, // Mar 17
@@ -71,19 +112,13 @@ const THEMES = {
     { dayOfYear: 365, name: "newyears", displayName: "New Year's Eve", emoji: "🎊", imageCount: 4 } // Dec 31
   ],
 
-  // Seasonal definitions with date ranges (day of year)
-  SEASONS: [
-    { start: 79, end: 171, name: "fall", displayName: "Spring", emoji: "🌸", imageCount: 4 }, // Day 79 (Mar 20) - Day 171 (Jun 20)
-    { start: 172, end: 264, name: "fall", displayName: "Summer", emoji: "☀️", imageCount: 4 }, // Day 172 (Jun 21) - Day 264 (Sep 21)
-    { start: 265, end: 354, name: "fall", displayName: "Fall", emoji: "🍂", imageCount: 4 }, // Day 265 (Sep 22) - Day 354 (Dec 20)
-    { start: 355, end: 365, name: "winter", displayName: "Winter", emoji: "❄️", imageCount: 9 }, // Day 355 (Dec 21) - Day 365 (Dec 31)
-    { start: 1, end: 78, name: "winter", displayName: "Winter", emoji: "❄️", imageCount: 9 } // Day 1 (Jan 1) - Day 78 (Mar 19)
-  ],
-
   // Available themes with their display properties (for dropdown and UI)
   AVAILABLE: {
     winter: { displayName: "Winter", emoji: "❄️", imageCount: 9 },
+    spring: { displayName: "Spring", emoji: "🌸", imageCount: 4 },
+    summer: { displayName: "Summer", emoji: "☀️", imageCount: 4 },
     fall: { displayName: "Fall", emoji: "🍂", imageCount: 4 },
+    easter: { displayName: "Easter", emoji: "🐰", imageCount: 4 },
     thanksgiving: { displayName: "Thanksgiving", emoji: "🦃", imageCount: 8 },
     christmas: { displayName: "Christmas", emoji: "🎄", imageCount: 6 },
     newyears: { displayName: "New Year's", emoji: "🎊", imageCount: 4 },
@@ -95,7 +130,8 @@ const THEMES = {
   }
 };
 
-// Function to detect current season/holiday based on date
+// Function to detect current season/event based on date
+// Events override seasons on specific days
 function getCurrentTheme() {
   const now = new Date();
   const year = now.getFullYear();
@@ -105,24 +141,24 @@ function getCurrentTheme() {
 
   console.log(`Current date: ${month}/${day}/${year} (Day ${dayOfYear} of year)`);
 
-  // Check dynamic holidays first (Thanksgiving, Leap Day, etc.)
-  const dynamicHolidays = calculateDynamicHolidays(year);
-  for (const holiday of dynamicHolidays) {
-    if (dayOfYear === holiday.dayOfYear) {
-      console.log(`Dynamic holiday detected: ${holiday.displayName}`);
-      return holiday.name;
+  // Check dynamic events first (Thanksgiving, Leap Day, etc.)
+  const dynamicEvents = calculateDynamicEvents(year);
+  for (const event of dynamicEvents) {
+    if (dayOfYear === event.dayOfYear) {
+      console.log(`Dynamic event detected: ${event.displayName}`);
+      return event.name;
     }
   }
 
-  // Check fixed holidays
-  for (const holiday of THEMES.FIXED_HOLIDAYS) {
-    if (dayOfYear === holiday.dayOfYear) {
-      console.log(`Holiday detected: ${holiday.displayName}`);
-      return holiday.name;
+  // Check fixed events (holidays that override seasons)
+  for (const event of THEMES.FIXED_EVENTS) {
+    if (dayOfYear === event.dayOfYear) {
+      console.log(`Event detected: ${event.displayName}`);
+      return event.name;
     }
   }
 
-  // Check for seasons
+  // Check for seasons (base theme)
   for (const season of THEMES.SEASONS) {
     const { start, end, name } = season;
     const isWithinSeason = dayOfYear >= start && dayOfYear <= end;

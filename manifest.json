@@ -21,10 +21,13 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "images/christmas/*.png",
-        "images/fall/*.png",
-        "images/thanksgiving/*.png",
         "images/winter/*.png",
+        "images/spring/*.png",
+        "images/summer/*.png",
+        "images/fall/*.png",
+        "images/easter/*.png",
+        "images/christmas/*.png",
+        "images/thanksgiving/*.png",
         "images/newyears/*.png",
         "images/valentines/*.png",
         "images/stpatricks/*.png",
