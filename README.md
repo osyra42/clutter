@@ -15,22 +15,46 @@ A Chrome extension that adds festive seasonal decorations that fall on every web
 - Automatically displays seasonal decorations based on the current date
 - Decorations fall from the top of the page
 - Interactive physics - decorations bounce away from your mouse cursor
-- Supports multiple themes:
-  - **Winter** (December 21 - March 19)
-  - **Spring** (March 20 - June 20)
-  - **Summer** (June 21 - September 21)
-  - **Fall** (September 22 - December 20)
-  - **Christmas** (December 25)
-  - **Fourth of July** (July 4)
-  - **Thanksgiving** (November 28)
+- Toggle clutter on/off from the popup
+- Choose your own theme or let Auto mode pick the right one
+- Cozy coffee-themed popup interface
+
+## Seasons
+
+Base themes that cover the entire year:
+
+| Season | Dates |
+|--------|-------|
+| ❄️ Winter | Dec 21 - Mar 19 |
+| 🌸 Spring | Mar 20 - Jun 20 |
+| ☀️ Summer | Jun 21 - Sep 21 |
+| 🍂 Fall | Sep 22 - Dec 20 |
+
+## Events
+
+Special events that override seasons on specific days:
+
+| Event | Date |
+|-------|------|
+| 🎊 New Year's | Jan 1 & Dec 31 |
+| 💝 Valentine's Day | Feb 14 |
+| 🍀 St. Patrick's Day | Mar 17 |
+| 🐰 Easter | Varies (Mar-Apr) |
+| 🎆 Fourth of July | Jul 4 |
+| 🎃 Halloween | Oct 31 |
+| 🦃 Thanksgiving | 4th Thursday of Nov |
+| 🎄 Christmas | Dec 25 |
+| 🎉 Leap Day | Feb 29 (leap years) |
 
 ## How it Works
 
 The extension injects the clutter library into every webpage you visit, creating an overlay of seasonal decorations that interact with your mouse movements using realistic physics.
 
+Events automatically override seasons on their specific days. For example, on Halloween (Oct 31), the Halloween theme will display instead of the Fall theme.
+
 ## Customization
 
-You can customize the behavior by editing `clutter-main/clutter.js`:
+You can customize the behavior by editing `clutter.js`:
 - `CLUTTER_COUNT`: Number of decorations (default: 20)
 - `CLUTTER_SPEED`: Min and max falling speed
 - `BOUNCE_FORCE`: How strongly decorations bounce
@@ -39,6 +63,9 @@ You can customize the behavior by editing `clutter-main/clutter.js`:
 ## Disable the Extension
 
 To temporarily disable the extension:
+- Click the extension icon and toggle off "Enable Clutter"
+
+Or from Chrome settings:
 1. Go to `chrome://extensions/`
 2. Toggle off the Clutter extension
 
